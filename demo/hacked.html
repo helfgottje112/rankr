@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>PrimeRoof Miami — DEMO of an insecure WordPress site</title>
+<meta name="generator" content="WordPress 6.4.2" />
+<style>
+  :root { --blue:#0a4da2; --light:#eef3fa; --line:#d7e0ee; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:Georgia,serif; background:#fff; color:#222; line-height:1.6; }
+  .ribbon { background:#a8071a; color:#fff; text-align:center; font-family:-apple-system,BlinkMacSystemFont,sans-serif; font-size:13px; font-weight:700; padding:10px 16px; }
+  .ribbon a { color:#fff; text-decoration:underline; }
+  header.brand { background:var(--blue); color:#fff; padding:22px 32px; }
+  header.brand h1 { margin:0; font-size:30px; }
+  header.brand p { margin:4px 0 0; opacity:.85; }
+  nav { background:#083b7d; color:#fff; font-family:-apple-system,sans-serif; }
+  nav .inner { display:flex; gap:26px; padding:10px 32px; max-width:1000px; margin:0 auto; }
+  .wrap { max-width:1000px; margin:0 auto; padding:30px 32px; display:grid; grid-template-columns:2fr 1fr; gap:28px; }
+  .services li { margin-bottom:8px; }
+  .cta { background:var(--light); border:1px solid var(--line); border-radius:12px; padding:20px; }
+  .btn { display:inline-block; background:#1f8a3c; color:#fff; text-decoration:none; padding:12px 20px; border-radius:8px; font-family:-apple-system,BlinkMacSystemFont,sans-serif; font-weight:700; }
+  .panel { background:var(--light); border:1px solid var(--line); border-radius:12px; padding:18px; font-family:-apple-system,BlinkMacSystemFont,sans-serif; }
+  .panel h3 { margin-top:0; color:var(--blue); }
+  .panel .bad { color:#a8071a; font-weight:700; }
+  .pills { display:flex; flex-wrap:wrap; gap:6px; }
+  .pill { font-size:12px; font-weight:600; padding:4px 11px; border-radius:20px; background:#fff1f0; border:1px solid #ffa39e; color:#a8071a; }
+  .cloud { background:#fff; border:1px solid #f6821f; border-radius:10px; padding:13px 15px; margin-top:14px; font-size:13.5px; }
+  .cloud b { color:#e86a00; }
+  .hidden-tech { margin-top:22px; border-top:2px dashed var(--line); padding-top:14px; font-family:Menlo,monospace; font-size:12px; color:#666; overflow-x:auto; }
+  footer { border-top:1px solid var(--line); max-width:1000px; margin:0 auto; padding:18px 32px 40px; font-size:12.5px; color:#777; font-family:-apple-system,BlinkMacSystemFont,sans-serif; }
+  @media (max-width:760px){ .wrap{ grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+  <div class="ribbon">⚠️ DEMO &mdash; this is a deliberately insecure WordPress business site built to show Rankr&rsquo;s security scan. <a href="/demo/">See the tool that flagged it →</a></div>
+
+  <header class="brand">
+    <h1>PrimeRoof Miami</h1>
+    <p>Roof repair &amp; replacement &bull; Miami, FL &bull; Call for a free estimate</p>
+  </header>
+  <nav><div class="inner"><span>Home</span><span>Services</span><span>Gallery</span><span>Reviews</span><span>Contact</span></div></nav>
+
+  <div class="wrap">
+    <main>
+      <h2>Shingle &amp; tile roofing done right</h2>
+      <p>Family-owned and operated in Miami for 20 years. Free inspections, fast estimates, 10-year workmanship warranty. Serving all of Miami-Dade.</p>
+      <ul class="services">
+        <li>Roof replacement &amp; installation</li>
+        <li>Storm damage repair</li>
+        <li>Leak detection &amp; spot repair</li>
+        <li>Gutter &amp; downspout service</li>
+      </ul>
+      <div class="cta">
+        <strong>Get your free estimate</strong> &mdash; (305) 555-0147<br /><br />
+        <a class="btn" href="#">Schedule a free inspection</a>
+      </div>
+      <p style="font-size:14px;color:#666;">&ldquo;Honest, fast, and clean.&rdquo; &mdash; Review on Google</p>
+    </main>
+
+    <aside>
+      <div class="panel">
+        <h3>🛡️ What Rankr found on this site</h3>
+        <p><b>Platform:</b> WordPress 6.4.2 &nbsp;<span class="bad">(runs WORDPRESS)</span></p>
+        <p><b>Hack risk:</b> <span class="bad">HIGH</span></p>
+        <p><b>Why:</b></p>
+        <ul style="margin:0;padding-left:18px;font-size:13.5px;">
+          <li>Login page (wp-login.php) fully exposed</li>
+          <li>XML-RPC endpoint open (no login required)</li>
+          <li>User list API returns admin usernames</li>
+        </ul>
+        <p style="margin-bottom:6px"><b>What attackers could do:</b></p>
+        <div class="pills">
+          <span class="pill">DDoS amplification</span>
+          <span class="pill">admin account enumeration</span>
+          <span class="pill">credential brute-force</span>
+          <span class="pill">malware &amp; SEO spam</span>
+          <span class="pill">defacement / ransomware</span>
+        </div>
+        <div class="cloud">
+          <b>Suggested fix (free):</b> put the site behind Cloudflare &mdash; hides wp-login behind an access rule, blocks XML-RPC floods, absorbs DDoS, adds free HTTPS. <a href="/demo/">Try the live scan →</a>
+        </div>
+      </div>
+
+      <div class="hidden-tech">
+        <!-- SIMULATED live probes for this demo domain -->
+        /wp-login.php &rarr; 200 OK (Login page)<br />
+        /xmlrpc.php &rarr; 200 OK (XML-RPC enabled)<br />
+        /wp-json/wp/v2/users &rarr; 200 OK → {"id":1,"slug":"admin",...}<br />
+        X-Frame-Options: absent &nbsp;|&nbsp; HSTS: absent &nbsp;|&nbsp; Server: nginx/1.24
+      </div>
+    </aside>
+  </div>
+
+  <footer>PrimeRoof Miami is a fictional demo business. The WordPress exposure above simulates what real audits of exposed sites detect. Site: /demo/hacked.html &bull; Tool demo: /demo/</footer>
+</body>
+</html>

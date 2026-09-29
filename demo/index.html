@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Rankr — Live Demo</title>
+<style>
+  :root { --bg:#0f1420; --card:#171e2e; --card2:#1d2638; --line:#2a3550; --txt:#e8edf7; --muted:#93a1bd; --acc:#4f8cff; --green:#3ddc84; --amber:#ffc248; --red:#ff5c4d; --radius:14px; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; background:var(--bg); color:var(--txt); line-height:1.5; }
+  .wrap { max-width:1100px; margin:0 auto; padding:0 20px; }
+  header { border-bottom:1px solid var(--line); padding:14px 0; }
+  header .wrap { display:flex; align-items:center; justify-content:space-between; }
+  .logo { font-weight:800; font-size:20px; letter-spacing:.3px; }
+  .logo span { color:var(--acc); }
+  nav a { color:var(--muted); text-decoration:none; margin-left:18px; font-size:14px; }
+  nav a:hover { color:var(--txt); }
+  .hero { padding:54px 0 26px; text-align:center; }
+  .hero h1 { font-size:42px; margin:0 0 10px; letter-spacing:-.5px; }
+  .hero h1 span { color:var(--acc); }
+  .hero p { color:var(--muted); font-size:17px; max-width:640px; margin:0 auto; }
+  .badges { margin-top:18px; display:flex; gap:8px; justify-content:center; flex-wrap:wrap; }
+  .badge { font-size:12.5px; padding:6px 14px; border:1px solid var(--line); border-radius:30px; color:var(--muted); background:var(--card); }
+  .features { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin:38px 0; }
+  .feat { background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:18px; }
+  .feat h3 { margin:0 0 8px; font-size:16px; }
+  .feat p { margin:0; color:var(--muted); font-size:13.5px; }
+  .feat .tag { display:inline-block; font-size:11px; font-weight:700; padding:3px 9px; border-radius:20px; margin-bottom:10px; }
+  .tag-prime { background:#fff1f0; color:#a8071a; border:1px solid #ffa39e; }
+  .tag-wp { background:#f0f5ff; color:#2b4ecb; border:1px solid #adc6ff; }
+  .tag-risk { background:#fff7e6; color:#ad6800; border:1px solid #ffd591; }
+  .section { margin:34px 0 8px; }
+  .section h2 { font-size:24px; }
+  .run-card { background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:22px; }
+  .run-card .row { display:flex; gap:12px; flex-wrap:wrap; }
+  .field { flex:1 1 140px; }
+  .field label { display:block; font-size:12px; color:var(--muted); margin-bottom:6px; font-weight:600; }
+  .field select, .field input { width:100%; padding:10px 12px; border-radius:9px; border:1px solid var(--line); background:var(--card2); color:var(--txt); font-size:14px; }
+  button { cursor:pointer; }
+  .btn { background:var(--acc); color:#fff; border:none; border-radius:10px; padding:11px 18px; font-size:14.5px; font-weight:700; }
+  .btn:hover { filter:brightness(1.08); }
+  .btn:disabled { opacity:.5; cursor:wait; }
+  .btn.cf { background:#f6821f; }
+  #status { margin-top:14px; color:var(--muted); font-size:14px; min-height:20px; }
+  table { width:100%; border-collapse:collapse; margin-top:18px; font-size:13.5px; }
+  th, td { text-align:left; padding:9px 10px; border-bottom:1px solid var(--line); vertical-align:top; }
+  th { color:var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:.4px; }
+  .score { font-weight:800; }
+  .chip { display:inline-block; font-size:11px; font-weight:700; padding:3px 9px; border-radius:20px; white-space:nowrap; }
+  .c-wp { background:#f0f5ff; color:#2b4ecb; }
+  .c-ok { background:#f6ffed; color:#1f8a3c; }
+  .r-high { background:#fff1f0; color:#a8071a; }
+  .r-medium { background:#fff7e6; color:#ad6800; }
+  .r-low { background:#f6ffed; color:#1f8a3c; }
+  .rowlink { color:var(--acc); font-size:12.5px; text-decoration:none; margin-right:10px; }
+  .rowlink:hover { text-decoration:underline; }
+  .shot-box { display:none; }
+  .shot-box.show { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+  .shot { background:var(--card2); border-radius:10px; padding:8px; }
+  .shot img { width:100%; border-radius:6px; border:1px solid var(--line); }
+  .shot span { display:block; font-size:11px; color:var(--muted); padding:6px 2px 0; }
+  pre.msg { background:var(--card2); border:1px solid var(--line); border-radius:10px; padding:14px; white-space:pre-wrap; font-size:13px; max-height:340px; overflow:auto; }
+  footer { border-top:1px solid var(--line); margin-top:46px; padding:22px 0 40px; color:var(--muted); font-size:13px; }
+  .hint { font-size:12.5px; color:var(--muted); margin-top:8px; }
+  @media (max-width:760px){ .features{grid-template-columns:1fr;} .shot-box.show{grid-template-columns:1fr;} }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="logo">Rankr<span>®</span> Demo</div>
+    <nav>
+      <a href="#demo">Live hunt</a>
+      <a href="#features">What it does</a>
+      <a href="/demo/hacked.html">Sample hacked site</a>
+    </nav>
+  </div>
+</header>
+
+<div class="wrap">
+  <section class="hero">
+    <h1>Find vulnerable local businesses<br />and turn them into <span>leads</span></h1>
+    <p>Real searches. Real audits. A live security scan of every business site — including what attackers could do to it — plus an outreach email ready to send.</p>
+    <div class="badges">
+      <span class="badge">🧭 500 site hunts</span>
+      <span class="badge">🛡️ Wordpress + hack-risk detection</span>
+      <span class="badge">🖼️ Desktop &amp; mobile previews</span>
+      <span class="badge">✉️ Auto-drafted outreach</span>
+    </div>
+  </section>
+
+  <section class="features" id="features">
+    <div class="feat">
+      <span class="tag tag-prime">SCORE 0–30</span>
+      <h3>Prime leads first</h3>
+      <p>Ranker scores every business site on design, mobile, UX, performance, trust and security. The worst sites are your best leads — they need you the most.</p>
+    </div>
+    <div class="feat">
+      <span class="tag tag-wp">WORDPRESS?</span>
+      <h3>Can it be hacked?</h3>
+      <p>Live probes check for exposed login, XML-RPC, user enumeration and missing security headers. The card spells out exactly what attackers could do — DDoS, brute force, ransomware entry.</p>
+    </div>
+    <div class="feat">
+      <span class="tag tag-risk">FIX IT</span>
+      <h3>Suggest Cloudflare</h3>
+      <p>Every at-risk report suggests the free Cloudflare fix: hide the admin login, block XML-RPC floods, absorb DDoS, free HTTPS. The draft email says it for you.</p>
+    </div>
+  </section>
+
+  <section class="section" id="demo">
+    <h2>Try it live</h2>
+    <div class="run-card">
+      <div class="row">
+        <div class="field"><label>SERVICE / WHICH</label>
+          <select id="what">
+            <option value="roofing company">Roofing company</option>
+            <option value="plumber">Plumber</option>
+            <option value="dentist">Dentist</option>
+            <option value="hair salon">Hair salon</option>
+            <option value="hvac company">HVAC company</option>
+            <option value="mechanic auto repair">Auto repair</option>
+            <option value="law firm">Law firm</option>
+            <option value="pest control">Pest control</option>
+          </select>
+        </div>
+        <div class="field"><label>CITY</label><input id="city" value="Miami" /></div>
+        <div class="field"><label>STATE</label><input id="state" value="FL" /></div>
+        <div class="field"><label>SITES TO TEST</label>
+          <select id="count">
+            <option value="20">20</option>
+            <option value="100">100</option>
+            <option value="500" selected>500</option>
+          </select>
+        </div>
+        <div style="align-self:flex-end"><button class="btn" id="run">Find leads</button></div>
+      </div>
+      <p class="hint">Runs a real multi-engine search (DuckDuckGo, Bing, Brave, Google), then audits every site it finds in a real browser. A 500-site hunt can take a couple of minutes.</p>
+      <div id="status"></div>
+    </div>
+  </section>
+
+  <section id="results"></section>
+</div>
+
+<footer>
+  <div class="wrap">
+    Demo of the Rankr lead-hunting tool. Results are live: real searches, real audits.
+    Full app lives at <a href="http://localhost:5174" style="color:var(--acc)">localhost:5174</a>.
+    See a deliberately insecure WordPress business site at <a href="/demo/hacked.html" style="color:var(--acc)">/demo/hacked.html</a>.
+  </div>
+</footer>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const statusEl = $("status");
+const show = (t) => (statusEl.textContent = t);
+let state = null;
+
+$("run").addEventListener("click", runHunt);
+function runHunt(){
+  const body = { what: $("what").value, city: $("city").value.trim() || "Miami", state: $("state").value.trim() || "FL", count: Number($("count").value), workers: 6 };
+  $("run").disabled = true;
+  show("Searching for \"" + body.what + " in " + body.city + " " + body.state + "\" — scanning up to " + body.count + " sites (this really runs live)…");
+  fetch("/api/hunt", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
+    .then(r => r.json())
+    .then(j => {
+      $("run").disabled = false;
+      if (j.error || !Array.isArray(j.leads)) { show("Error: " + (j.error || "no response")); return; }
+      state = j;
+      show(j.searched + " sites found · " + j.audited + " audited · " + j.scored + " scored · engines: " + j.engine);
+      renderLeads(j.leads);
+    })
+    .catch(e => { $("run").disabled = false; show("Request failed: " + e.message); });
+}
+
+function renderLeads(leads){
+  const sec = $("results");
+  if (!leads.length) { sec.innerHTML = '<div class="run-card"><h3>No leads found this run</h3><p class="hint">Try a different city or bump the count.</p></div>'; return; }
+  let html = "<div class='run-card'><h3 style='margin-top:0'>" + leads.length + " leads" + (state.query ? " for \"" + state.query + "\"" : "") + "</h3><table><tr><th>Score</th><th>Domain</th><th>CMS</th><th>Hack risk</th><th>Action</th></tr>";
+  leads.forEach((l, i) => {
+    const cms = l.cms ? (l.cms === "wordpress" ? "<span class='chip c-wp'>WordPress" + (l.cmsVersion ? " " + l.cmsVersion : "") + "</span>" : "<span class='chip c-ok'>" + l.cms + "</span>") : "<span class='chip c-ok'>—</span>";
+    const risk = l.hackRisk && l.hackRisk.level ? "<span class='chip r-" + (l.hackRisk.level === "high" ? "high" : l.hackRisk.level) + "'>" + l.hackRisk.level.toUpperCase() + "</span>" : "<span class='chip c-ok'>n/a</span>";
+    html += "<tr><td class='score' style='color:" + (l.score < 30 ? "var(--red)" : l.score < 60 ? "var(--amber)" : "var(--green)") + "'>" + (typeof l.score === "number" ? l.score : "—") + "</td><td><b>" + (l.businessName || l.domain) + "</b><br/><a class='rowlink' href='" + escapeHtml(l.url) + "' target='_blank' rel='noreferrer'>" + l.domain + "</a></td><td>" + cms + "</td><td>" + risk + "</td><td><a class='rowlink' href='#' onclick='event.preventDefault();preview(" + i + ")'>🖼 preview</a><a class='rowlink' href='#' onclick='event.preventDefault();draft(" + i + ")'>✉️ draft</a><a class='rowlink' id='crm-" + i + "' href='#' onclick='event.preventDefault();addToCrm(" + i + ")' style='color:#38bdf8'>💼 to CRM</a></td></tr>";
+    html += "<tr id='shot-" + i + "' class='shot-box'><td colspan='5'><div class='shot-box show'><div class='shot'><span>Desktop</span><img loading='lazy' src='' alt='desktop preview'/></div><div class='shot'><span>Mobile</span><img loading='lazy' src='' alt='mobile preview'/></div></div></td></tr>";
+  });
+  html += "</table></div>";
+  sec.innerHTML = html;
+}
+
+function preview(i){
+  const l = state.leads[i];
+  const row = $("shot-" + i);
+  const box = row.querySelector(".shot-box");
+  const imgs = row.querySelectorAll("img");
+  const cur = box.classList.contains("show");
+  box.classList.toggle("show", !cur);
+  if (!cur && !row.dataset.loaded){
+    row.dataset.loaded = "1";
+    imgs.forEach(img => img.src = ""); // reset
+    fetch("/api/render?url=" + encodeURIComponent(l.url), { signal: AbortSignal.timeout(120000) })
+      .then(r => r.json())
+      .then(d => {
+        if (d.desktopScreenshotB64) imgs[0].src = "data:image/png;base64," + d.desktopScreenshotB64;
+        if (d.mobileScreenshotB64) imgs[1].src = "data:image/png;base64," + d.mobileScreenshotB64;
+      })
+      .catch(e => { row.dataset.loaded = ""; });
+  }
+}
+
+function draft(i){
+  const l = state.leads[i];
+  const sec = $("results");
+  let box = $("draftbox");
+  if (!box){ box = document.createElement("div"); box.id = "draftbox"; sec.appendChild(box); }
+  box.className = "run-card";
+  box.style.marginTop = "14px";
+  box.innerHTML = "<h3 style='margin:0 0 6px'>Draft outreach — " + (l.businessName || l.domain) + "</h3><p class='hint'>Generating with the site's security findings…</p><pre class='msg' id='draftpre'>…</pre>";
+  fetch("/api/message", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url: l.url, yourName: "Your Web Studio", yourPhone: "706-910-6262" }) })
+    .then(r => r.json())
+    .then(d => {
+      const pre = $("draftpre");
+      if (d.message){ pre.textContent = "TO: " + d.message.to + "\nSUBJECT: " + d.message.subject + "\n\n" + d.message.body; }
+      else { pre.textContent = JSON.stringify(d, null, 2); }
+    })
+    .catch(e => { $("draftpre").textContent = "Error: " + e.message; });
+}
+
+function addToCrm(i){
+  const l = state.leads[i];
+  const btn = $("crm-" + i);
+  if (btn) btn.textContent = "⏳ adding…";
+  fetch("/api/crm/push", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ lead: l }),
+  })
+    .then((r) => r.json())
+    .then((d) => {
+      if (d.ok) {
+        if (btn) { btn.textContent = "✓ In CRM"; btn.style.color = "var(--green)"; }
+        show("✓ Added \"" + (l.businessName || l.domain) + "\" to your CRM (localhost:5173/companies)!");
+      } else {
+        if (btn) btn.textContent = "❌ error";
+        show("CRM error: " + (d.error || "failed to add"));
+      }
+    })
+    .catch((e) => {
+      if (btn) btn.textContent = "❌ error";
+      show("CRM request failed: " + e.message);
+    });
+}
+
+function escapeHtml(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+</script>
+</body>
+</html>
