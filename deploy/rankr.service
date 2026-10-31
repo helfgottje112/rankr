@@ -1,0 +1,18 @@
+[Unit]
+Description=Rankr website auditor and guided demo
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/root/workspace/rankr/backend
+Environment=NODE_ENV=production
+Environment=PORT=3212
+ExecStart=/usr/bin/npm start
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

@@ -61,6 +61,15 @@ export default function App() {
   });
   const [ignoring, setIgnoring] = useState({});
 
+  useEffect(() => {
+    const target = new URLSearchParams(location.search).get("auditTarget");
+    if (!target) return;
+    const absolute = target.startsWith("/") ? `${location.origin}${target}` : target;
+    setTab("audit");
+    setUrl(absolute);
+    history.replaceState(null, "", location.pathname);
+  }, []);
+
   const ignoreLead = async (lead, reason = "Directory / Waste of Link") => {
     const key = lead.domain || lead.url;
     setIgnoring((p) => ({ ...p, [key]: true }));

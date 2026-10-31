@@ -49,8 +49,8 @@
   <div class="top">⚠️ EDUCATIONAL DEMO — run only against this local demo site. Never point these probes at a real site without permission. <a href="/demo/">← back to tool</a></div>
 
   <div class="wrap">
-    <h1>Live attack demo: hacking <span style="color:var(--red)">PrimeRoof Miami</span></h1>
-    <p class="sub">Every step below makes <b>real requests</b> against the vulnerable surface of the demo business site (<a href="/demo/hacked.html" style="color:var(--cyan)">hacked.html</a>). Watching each request actually hit WordPress-style endpoints is what a first-time auditor sees.</p>
+    <h1>Safe exposure walkthrough: <span style="color:var(--red)">PrimeRoof Miami</span></h1>
+    <p class="sub">This authorized fixture makes real requests only to synthetic endpoints on this demo server. Results are labeled <b>PASSED</b>, <b>FAILED</b>, or <b>SIMULATED</b>; no shell, filesystem, or real WordPress installation exists.</p>
 
     <div class="controls">
       <button class="btn green" id="runAll">▶ Run full attack chain</button>
@@ -87,8 +87,13 @@ const term = document.getElementById("term");
 const logLine = (html, cls) => { const d = document.createElement("div"); d.className = "line " + (cls||""); d.innerHTML = html; term.appendChild(d); term.scrollTop = term.scrollHeight; };
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 const esc = (s) => String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
-const RUN = [+/-/+ "+RUN+"];
 let cancelled = false;
+const stepResults = [];
+function outcome(label, status, detail){
+  stepResults.push({ label, status, detail });
+  const cls = status === "PASSED" ? "c-bad" : status === "SIMULATED" ? "c-amb" : "c-ok";
+  logLine("<span class='" + cls + "'>[" + status + "] " + esc(label) + " — " + esc(detail) + "</span>");
+}
 
 const CVES = [
   { id: "CVE-2019-8942", cvss: 8.8, rce: true },
@@ -104,12 +109,12 @@ const CVES = [
   { id: "CVE-2022-21664", cvss: 7.1 },
 ];
 function showCves(){
-  let h = "<div class='stat'><b>Known CVEs for WordPress 5.8.3 detected on this site</b><table><tr><th>CVE</th><th>CVSS</th><th>Severity</th><th>RCE</th></tr>";
+  let h = "<div class='stat'><b>Version-based CVE matches for the synthetic WordPress 5.8.3 fingerprint</b><p class='c-dim'>A version match is a lead signal, not proof that a specific exploit is reachable.</p><table><tr><th>CVE</th><th>CVSS</th><th>Severity</th><th>RCE class</th></tr>";
   CVES.forEach(c => {
     const sev = c.cvss >= 8 ? "HIGH" : c.cvss >= 7 ? "HIGH" : "MEDIUM";
     h += "<tr><td class='c-cy'>" + c.id + "</td><td><b>" + c.cvss + "</b></td><td><span class='pill p-hi'>" + sev + "</span></td><td>" + (c.rce ? "<span class='ok-badge'>YES</span>" : "—") + "</td></tr>";
   });
-  h += "</table><div style='margin-top:8px;color:var(--muted)'>Most severe: <span class='c-bad'>CVE-2019-8942 (8.8) — unauthenticated upload → remote code execution</span></div></div>";
+  h += "</table><div style='margin-top:8px;color:var(--muted)'>Rankr should confirm the affected range and prerequisites before presenting any CVE as exploitable.</div></div>";
   document.getElementById("cvelist").innerHTML = h;
 }
 
@@ -131,6 +136,7 @@ async function runAll(){
   if (document.getElementById("runAll").disabled) return;
   document.getElementById("runAll").disabled = true;
   term.innerHTML = "";
+  stepResults.length = 0;
   showCves();
   document.getElementById("result").textContent = "Running…";
   setMeta("Recon", "users found: 2");
@@ -141,7 +147,7 @@ async function runAll(){
   let r = await cmd("/readme.html");
   const v = r.text.match(/Version\s+([\d.]+)/);
   logLine(v ? "<span class='c-ok'>→ version disclosed: WordPress " + esc(v[1]) + "</span>" : "<span class='c-bad'>→ version not disclosed</span>");
-  logLine("<span class='c-amb'>→ 11 core CVEs apply to this version (see table), 5 of them enable remote code execution.</span>");
+  outcome("Version disclosure", v ? "PASSED" : "FAILED", v ? "public version fingerprint observed" : "version not exposed");
 
   await step("2 · Enumerate accounts via the REST API", [
     "GET /wp-json/wp/v2/users — WordPress exposes the full user list by default:",
@@ -149,9 +155,10 @@ async function runAll(){
   r = await cmd("/wp-json/wp/v2/users");
   try {
     const users = JSON.parse(r.text);
-    logLine("<span class='c-bad'>→ " + users.length + " accounts returned unauthicated</span>", "c-bad");
+    logLine("<span class='c-bad'>→ " + users.length + " synthetic accounts returned unauthenticated</span>", "c-bad");
     users.forEach(u => logLine("&nbsp;&nbsp;&nbsp;id: " + u.id + " · login: <span class='c-amb'>" + esc(u.slug) + "</span> · " + esc(u.name)));
-  } catch { logLine("→ " + esc(r.text), "c-dim"); }
+    outcome("User enumeration", users.length ? "PASSED" : "FAILED", users.length + " synthetic accounts returned");
+  } catch { logLine("→ " + esc(r.text), "c-dim"); outcome("User enumeration", "FAILED", "no user list returned"); }
   setMeta("Enumeration", "admin account 'admin' confirmed");
 
   await step("3 · Brute-force the login (no lockout on this site)", [
@@ -162,18 +169,18 @@ async function runAll(){
     ["admin", "admin123"],
     ["admin", "letmein123"],
   ];
+  let loggedIn = false;
   for (const [u, p] of attempts) {
     const fd = new URLSearchParams({ log: u, pwd: p });
-    const rr = await fetch("/wp-login.php", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: fd, redirect: "manual" });
-    const ok = rr.status === 302;
+    const rr = await fetch("/wp-login.php", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: fd });
+    const ok = rr.ok && rr.url.includes("/wp-admin/");
     logLine(ok
       ? "<span class='c-bad'>→ login ok: admin / " + esc(p) + " — session cookie acquired (302 → /wp-admin/)</span>"
       : "<span class='c-in'>→ " + esc(u) + " / " + esc(p) + ": denied</span>");
-    if (ok) { setMeta("Breach", "admin / letmein123 → dashboard access"); break; }
+    if (ok) { loggedIn = true; setMeta("Breach", "synthetic admin session acquired"); break; }
     await sleep(260);
   }
-  if (!cancelled) { logLine(""); logLine("<span class='c-ok'>ATTEMPT RESULT: " + (document.title) + "</span>"); }
-  setMeta("Breach", "admin / letmein123 → dashboard access");
+  outcome("Weak demo credential", loggedIn ? "PASSED" : "FAILED", loggedIn ? "synthetic session acquired" : "all attempts rejected");
 
   await step("4 · XML-RPC: pingback DDoS amplification", [
     "POST /xmlrpc.php system.listMethods — shows amplification primitives (pingback.ping lets one request trigger many outbound fetches):",
@@ -181,7 +188,9 @@ async function runAll(){
   r = await cmd("/xmlrpc.php", { method: "POST", headers: { "Content-Type": "text/xml" }, body: "<?xml version=\"1.0\"?><methodCall><methodName>system.listMethods</methodName><params></params></methodCall>" });
   const methods = r.text.match(/<string>([^<]+)<\/string>/g) || [];
   logLine(methods.map(m => "&nbsp;&nbsp;&nbsp;<span class='c-amb'>" + esc(m.replace(/<\/?string>/g,"")) + "</span>").join("\n"));
-  logLine("<span class='c-ok'>→ " + methods.length + " XML-RPC methods enabled — pingback.ping can be fired as a flood in one POST (amplification abuse).</span>");
+  const pingbackOpen = r.text.includes("pingback.ping");
+  logLine("<span class='c-ok'>→ " + methods.length + " XML-RPC methods returned.</span>");
+  outcome("XML-RPC exposure", pingbackOpen ? "PASSED" : "FAILED", pingbackOpen ? "pingback.ping advertised" : "pingback method absent");
   setMeta("DDoS vector", "XML-RPC multi-call open");
 
   await step("5 · Clickjacking the login (no X-Frame-Options header)", [
@@ -190,6 +199,7 @@ async function runAll(){
   const fl = document.createElement("div");
   fl.innerHTML = "<span class='c-amb'>→ Hosting login in a transparent iframe…</span>";
   logLine(fl.innerHTML);
+  outcome("Frame protection", "PASSED", "vulnerable fixture intentionally omits frame protections");
   await sleep(200);
 
   await step("6 · Route leak → RCE target practice", [
@@ -201,30 +211,40 @@ async function runAll(){
     const routes = Object.keys(j.routes || {}).slice(0, 4);
     logLine("<span class='c-amb'>REST namespaces leak:</span> " + esc((j.namespaces||[]).join(", ")));
     logLine("&nbsp;&nbsp;&nbsp;routes: " + routes.map(rr => "● " + esc(rr)).join("\n"));
-  } catch { logLine(esc(r.text.slice(0,160)), "c-dim"); }
+    outcome("Route disclosure", routes.length ? "PASSED" : "FAILED", routes.length + " synthetic routes listed");
+  } catch { logLine(esc(r.text.slice(0,160)), "c-dim"); outcome("Route disclosure", "FAILED", "route index unavailable"); }
 
   await step("7 · Debug log — write-request evidence (CVE-2019-8942 chain)", [
     "GET /wp-content/debug.log — a public PHP log can expose failed write attempts that map straight to the RCE upload:",
   ]);
   r = await cmd("/wp-content/debug.log");
   logLine(r.text ? "<span class='c-bad'>→ debug.log publicly readable — contains stack traces of the upload path</span>" : "→ no log exposed");
+  outcome("Debug disclosure", r.status === 200 && r.text ? "PASSED" : "FAILED", r.status === 200 ? "synthetic log readable" : "log blocked");
   setMeta("RCE evidence", "debug.log readable");
 
   await step("8 · Deliver the (simulated) CVE-2019-8942 upload", [
     "The crop endpoint accepts the poisoned image (waves cropper) — server-side write of shell.php:",
   ]);
   r = await cmd("/wp-admin/async-upload.php", { method: "POST" });
-  logLine(r.status === 200 ? "<span class='c-bad'>→ HTTP 200 — file accepted → /wp-content/uploads/2026/09/shell.php (simulated)</span>" : "<span class='c-in'>→ " + esc(r.text) + "</span>");
+  let uploadSimulated = false;
+  try { uploadSimulated = r.status === 200 && JSON.parse(r.text).simulated === true; } catch {}
+  logLine(uploadSimulated ? "<span class='c-amb'>→ HTTP 200 — harmless synthetic upload accepted; no file was written.</span>" : "<span class='c-in'>→ upload blocked: " + esc(r.text) + "</span>");
+  outcome("Upload impact", uploadSimulated ? "SIMULATED" : "FAILED", uploadSimulated ? "response only; no filesystem access" : "upload not accepted");
 
   await step("9 · Dashboard access confirmed", []);
   r = await cmd("/wp-admin/");
-  logLine(r.status === 200 ? "<span class='c-ok'>→ Logged into /wp-admin/ as admin. Every plugin, every upload, every DB table is now reachable.</span>" : "→ not reachable");
+  logLine(r.status === 200 ? "<span class='c-bad'>→ Synthetic dashboard session confirmed.</span>" : "→ dashboard protected");
+  outcome("Dashboard access", r.status === 200 ? "PASSED" : "FAILED", r.status === 200 ? "synthetic authenticated page reached" : "access denied");
 
   await step("10 · What actually got defeated", [
-    "<span class='c-ok'>Chain: readme → version → CVE list → user enumeration → password spray → dashboard → RCE path.</span>",
-    "<span class='c-dim'>The fix that kills steps 3–8 in one go: Cloudflare free plan (hides login, blocks XML-RPC floods, adds HTTPS + WAF).</span>",
+    "<span class='c-ok'>Observed chain: version disclosure → synthetic users → weak demo credential → dashboard.</span>",
+    "<span class='c-dim'>Remediation requires updates, access control, endpoint reduction, rate limiting, secure headers, and private logs. A CDN/WAF can supplement—not replace—those controls.</span>",
   ]);
-  document.getElementById("result").innerHTML = "<span class='c-bad' style='font-size:16px'>COMPROMISED — 9 out of 9 phases succeeded.</span><br/><span class='c-dim'>Every open endpoint this demo used is what Rankr flags on real business sites.</span>";
+  const passed = stepResults.filter(x => x.status === "PASSED").length;
+  const simulated = stepResults.filter(x => x.status === "SIMULATED").length;
+  const failed = stepResults.filter(x => x.status === "FAILED").length;
+  document.getElementById("result").innerHTML = "<span class='c-bad' style='font-size:16px'>EXPOSURES OBSERVED: " + passed + "</span><br/><span class='c-amb'>SIMULATED: " + simulated + "</span> · <span class='c-ok'>BLOCKED/FAILED: " + failed + "</span><br/><span class='c-dim'>Only observed evidence is counted; simulated impact is reported separately.</span>";
+  document.getElementById("runAll").disabled = false;
 }
 
 function setMeta(k, v){ document.getElementById("result").textContent = k + ": " + v; }

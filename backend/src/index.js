@@ -8,8 +8,11 @@ import { draftMessage } from "./message.js";
 import { searchWeb } from "./search.js";
 
 const app = express();
+app.disable("x-powered-by");
 app.use(cors());
 app.use(express.json({ limit: "25mb" }));
+app.use(express.urlencoded({ extended: false }));
+app.use(express.text({ type: ["text/xml", "application/xml"], limit: "256kb" }));
 
 const ownerCache = new Map();
 
@@ -474,7 +477,7 @@ app.post("/wp-login.php", (req, res) => {
   const log = String(req.body && req.body.log || "").trim();
   const pwd = String(req.body && req.body.pwd || "");
   if (log.toLowerCase() === "admin" && pwd === "letmein123") {
-    res.set("Set-Cookie", "wordpress_logged_in_admin=live-session; HttpOnly; Path=/");
+    res.set("Set-Cookie", "rankr_demo_session=authorized-synthetic-session; HttpOnly; SameSite=Lax; Path=/");
     res.redirect("/wp-admin/");
   } else {
     res.redirect("/wp-login.php?failed=1");
@@ -482,7 +485,7 @@ app.post("/wp-login.php", (req, res) => {
 });
 app.post("/xmlrpc.php", (req, res) => {
   const xml = (req.body && String(req.body)) || "";
-  const m = xml.match(/<string>([^<]+)<\/string>/);
+  const m = xml.match(/<methodName>([^<]+)<\/methodName>/) || xml.match(/<string>([^<]+)<\/string>/);
   const method = m ? m[1] : "unknown";
   res.set("Content-Type", "text/xml");
   if (method.startsWith("system.")) {
@@ -508,8 +511,15 @@ app.get("/wp-json/wp/v2/users", (req, res) => res.json([
   { id: 1, name: "PrimeRoof Admin", slug: "admin", link: "https://primeroofmiami.test/?author=1" },
   { id: 2, name: "Maria R.", slug: "maria", first_name: "Maria", last_name: "R." },
 ]));
-app.get("/wp-admin/", (req, res) => res.send("<!DOCTYPE html><html><body style='font-family:sans-serif'><h1>Welcome to your WordPress dashboard</h1><p>Session active — you are logged in as <b>admin</b>.</p><p>Every plugin installed on this site is now under your control.</p><p><small>demo server</small></p></body></html>"));
-app.get("/wp-admin/async-upload.php", (req, res) => res.json({ success: true, data: { url: "/wp-content/uploads/2026/09/shell.php", file: "shell.php", type: "image/png" } }));
+function demoAuthenticated(req) {
+  return String(req.headers.cookie || "").includes("rankr_demo_session=authorized-synthetic-session");
+}
+function requireDemoAuth(req, res, next) {
+  if (!demoAuthenticated(req)) return res.status(401).json({ error: "Synthetic demo authentication required" });
+  next();
+}
+app.get("/wp-admin/", requireDemoAuth, (req, res) => res.send("<!DOCTYPE html><html><body style='font-family:sans-serif'><h1>Welcome to your synthetic WordPress dashboard</h1><p>Session active — you are logged in as <b>admin</b>.</p><p>No real WordPress installation, filesystem, or database exists behind this demo.</p><p><small>Rankr authorized demo server</small></p></body></html>"));
+app.post("/wp-admin/async-upload.php", requireDemoAuth, (req, res) => res.json({ simulated: true, success: true, data: { url: "/synthetic-only/demo-upload.png", file: "demo-upload.png", type: "image/png" } }));
 app.get("/wp-content/debug.log", (req, res) => {
   res.set("Content-Type", "text/plain");
   res.send([
@@ -522,8 +532,25 @@ app.get("/wp-content/debug.log", (req, res) => {
 app.get("/wp-content/readme.html", (req, res) => res.redirect("/readme.html"));
 app.get("/favicon.ico", (req, res) => res.status(204).end());
 
-app.get("/", (req, res) => res.redirect("/demo/"));
+app.use("/fixed", (req, res, next) => {
+  res.set({
+    "X-Frame-Options": "DENY",
+    "X-Content-Type-Options": "nosniff",
+    "Referrer-Policy": "no-referrer",
+    "Content-Security-Policy": "default-src 'self'; style-src 'self' 'unsafe-inline'; frame-ancestors 'none'; form-action 'self'",
+  });
+  next();
+});
+app.get("/fixed/", (req, res) => res.sendFile(fileURLToPath(new URL("../../demo/fixed.html", import.meta.url))));
+app.get("/fixed/wp-login.php", (req, res) => res.status(403).json({ error: "Login is protected by access control" }));
+app.all("/fixed/xmlrpc.php", (req, res) => res.status(403).json({ error: "XML-RPC disabled" }));
+app.get("/fixed/wp-json/wp/v2/users", (req, res) => res.status(404).json({ error: "Not found" }));
+app.get("/fixed/wp-content/debug.log", (req, res) => res.status(404).json({ error: "Not found" }));
 app.use("/demo", express.static(fileURLToPath(new URL("../../demo", import.meta.url)), { extensions: ["html"] }));
+
+const frontendDist = fileURLToPath(new URL("../../frontend/dist", import.meta.url));
+app.use(express.static(frontendDist));
+app.get("*", (req, res) => res.sendFile(`${frontendDist}/index.html`));
 
 const PORT = process.env.PORT || 3002;
 app.listen(PORT, () => {

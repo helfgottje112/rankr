@@ -217,15 +217,19 @@ async function renderSite(url, timeoutMs, captureScreens = true) {
 async function probeSecurity(normalized) {
   const out = { headers: {}, wpSignals: {}, server: "", xPowered: "", xFrameOptions: false, xXss: false, csp: false, hsts: false };
   try {
-    const origin = new URL(normalized).origin;
+    const target = new URL(normalized);
+    const origin = target.origin;
+    // The built-in remediated fixture is intentionally namespaced so its probes
+    // cannot bleed into the vulnerable fixture on the same demo origin.
+    const probeBase = target.pathname.startsWith("/fixed") ? `${origin}/fixed` : origin;
     const probes = [
-      ["origin", origin],
-      ["login", `${origin}/wp-login.php`],
-      ["xmlrpc", `${origin}/xmlrpc.php`],
-      ["users", `${origin}/wp-json/wp/v2/users`],
-      ["routes", `${origin}/wp-json/`],
-      ["debug", `${origin}/wp-content/debug.log`],
-      ["readme", `${origin}/wp-content/readme.html`],
+      ["origin", target.pathname.startsWith("/fixed") ? `${probeBase}/` : origin],
+      ["login", `${probeBase}/wp-login.php`],
+      ["xmlrpc", `${probeBase}/xmlrpc.php`],
+      ["users", `${probeBase}/wp-json/wp/v2/users`],
+      ["routes", `${probeBase}/wp-json/`],
+      ["debug", `${probeBase}/wp-content/debug.log`],
+      ["readme", `${probeBase}/wp-content/readme.html`],
     ];
     const settled = await Promise.allSettled(probes.map(async ([k, u]) => {
       const r = await fetch(u, {

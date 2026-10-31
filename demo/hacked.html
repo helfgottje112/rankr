@@ -33,7 +33,7 @@
 </style>
 </head>
 <body>
-  <div class="ribbon">⚠️ DEMO &mdash; this is a deliberately insecure WordPress business site built to show Rankr&rsquo;s security scan. <a href="/demo/">See the tool that flagged it →</a></div>
+  <div class="ribbon">⚠️ SYNTHETIC DEMO &mdash; no real WordPress, customer data, filesystem, or shell exists. <a href="/demo/">Guided demo</a> · <a href="/demo/hackplay.html">Safe walkthrough</a> · <a href="/fixed/">Remediated version</a></div>
 
   <header class="brand">
     <h1>PrimeRoof Miami</h1>
@@ -63,22 +63,22 @@
         <h3>🛡️ What Rankr found on this site</h3>
         <p><b>Platform:</b> WordPress 6.4.2 &nbsp;<span class="bad">(runs WORDPRESS)</span></p>
         <p><b>Hack risk:</b> <span class="bad">HIGH</span></p>
-        <p><b>Why:</b></p>
+        <p><b>Observed evidence:</b></p>
         <ul style="margin:0;padding-left:18px;font-size:13.5px;">
           <li>Login page (wp-login.php) fully exposed</li>
           <li>XML-RPC endpoint open (no login required)</li>
           <li>User list API returns admin usernames</li>
         </ul>
-        <p style="margin-bottom:6px"><b>What attackers could do:</b></p>
+        <p style="margin-bottom:6px"><b>Potential impact if prerequisites are met:</b></p>
         <div class="pills">
           <span class="pill">DDoS amplification</span>
           <span class="pill">admin account enumeration</span>
           <span class="pill">credential brute-force</span>
-          <span class="pill">malware &amp; SEO spam</span>
-          <span class="pill">defacement / ransomware</span>
+          <span class="pill">unauthorized changes</span>
+          <span class="pill">malware / SEO spam after account compromise</span>
         </div>
         <div class="cloud">
-          <b>Suggested fix (free):</b> put the site behind Cloudflare &mdash; hides wp-login behind an access rule, blocks XML-RPC floods, absorbs DDoS, adds free HTTPS. <a href="/demo/">Try the live scan →</a>
+          <b>Suggested remediation:</b> patch WordPress and plugins, protect admin access, enforce MFA and rate limits, disable unused XML-RPC, block user enumeration, keep logs private, and add secure headers. A CDN/WAF can supplement these controls. <a href="/fixed/">See the protected version →</a>
         </div>
       </div>
 
